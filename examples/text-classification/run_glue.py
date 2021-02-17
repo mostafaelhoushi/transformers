@@ -22,6 +22,9 @@ import os
 import sys
 from dataclasses import dataclass, field
 from typing import Callable, Dict, Optional
+import normalization_utils
+import prune_utils
+import torch
 
 import numpy as np
 
@@ -166,6 +169,49 @@ def main():
         eval_dataset=eval_dataset,
         compute_metrics=build_compute_metrics_fn(data_args.task_name),
     )
+
+    # Prune Model
+    if training_args.layer_prune is not None:
+        if training_args.layer_prune == "weightnorm":
+            model = prune_utils.prune_by_weightnorm(model, training_args.num_prune)
+        else:
+            drop_layers = [int(drop_layer_txt) for drop_layer_txt in training_args.layer_prune.split()]
+            drop_layers.sort(reverse=True) # prune in descending order to preserve the index
+            for drop_layer in drop_layers: 
+                del model.bert.encoder.layer[drop_layer]
+
+    # Freeze Model           
+    if training_args.freeze_weights:
+        model = normalization_utils.freeze_weights(model)
+
+    if training_args.freeze_biases:
+        model = normalization_utils.freeze_biases(model)
+
+    if training_args.freeze_beta:
+        model = normalization_utils.freeze_beta(model)
+
+    if training_args.freeze_gamma:
+        model = normalization_utils.freeze_gamma(model)
+
+    print(model)
+
+    if training_args.train_classifier_layer:
+        # freeze all params
+        #for param in model.parameters():
+        #    param.requires_grad = False
+
+        for param in model.classifier.parameters():
+            param.requires_grad = True
+
+        for param in model.bert.pooler.parameters(): #model.pre_classifier.parameters():
+            param.requires_grad = True
+
+        #for param in model.bert.encoder.layer[11].parameters(): #model.distilbert.transformer.layer[5].parameters():
+        #    param.requires_grad = True
+
+    #model, _ = normalization_utils.unfreeze(model, 48)
+
+    #normalization_utils.check_grad(model)
 
     # Training
     if training_args.do_train:

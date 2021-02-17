@@ -220,6 +220,15 @@ class TrainingArguments:
         metadata={"help": "If >=0, uses the corresponding part of the output as the past state for next step."},
     )
 
+    train_classifier_layer: bool = field(default=False, metadata={"help": "Unfreeze last layer"})
+    freeze_weights: bool = field(default=False, metadata={"help": "Whether to freeze weights of all dense layers."})
+    freeze_biases: bool = field(default=False, metadata={"help": "Whether to freeze biases of all dense layers."})
+    freeze_beta: bool = field(default=False, metadata={"help": "Whether to freeze beta of all normalization layers."})
+    freeze_gamma: bool = field(default=False, metadata={"help": "Whether to freeze gamma of all normalization layers."})
+
+    layer_prune: str = field(default=None, metadata={"help": "Specify a layer to prune or a strategy to prune"})
+    num_prune: int = field(default=1, metadata={"help": "Number of layers to prune"})
+
     @property
     def train_batch_size(self) -> int:
         """
